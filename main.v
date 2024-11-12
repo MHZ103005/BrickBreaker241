@@ -63,16 +63,14 @@ module ps2input(clock, reset, PS2_CLK, PS2_DAT, keyD, keyP);
 
     PS2_Controller PS2 (
 	// Inputs
-	.CLOCK_50				(clock),
-	.reset				    (reset),
-
+	.CLOCK_50(clock),
+	.reset(reset),
 	// Bidirectionals
-	.PS2_CLK			(PS2_CLK),
- 	.PS2_DAT			(PS2_DAT),
-
+	.PS2_CLK(PS2_CLK),
+ 	.PS2_DAT(PS2_DAT),
 	// Outputs
-	.received_data		(key_data),
-	.received_data_en	(keyP)
+	.received_data(key_data),
+	.received_data_en(keyP)
     );
     //FF
     always @ (posedge clock)
@@ -97,81 +95,6 @@ module mainVGA(clock, VGA_X, VGA_Y, VGA_COLOR, plot, reset);
     always @ (*)
 
 
-endmodule
-
-module paddle(clock, in, length, paddleX, state, resetn);
-    input length, clock, resetn;
-    input [2:0]state;
-    input [7:0] in; //Double Check size of input
-    output reg [7:0] paddleX;
-    always@(posedge clock) // we are going to need a slower counter for this
-        begin
-        if(!resetn ) paddleX <= 8'b0;/*default*/
-        else if(state == 3'b001 | state = 3'b010)
-            begin
-            if(in == 8'b0;)
-                if(paddleX + length < 160) paddleX <= paddleX + 1;
-            else if(in == 8'b1)
-                begin
-                if(paddleX > 0) paddleX <= paddleX - 1;
-                end
-            end
-        end
-endmodule
-
-module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in); //velocity may be required, or we can just hard code it
-    input clock, reset, cX, cY;
-    input in;
-    input [2:0]state;
-    output reg signed [2:0] vX, vY;
-    output reg [7:0] nextX, nextY;
-
-    reg move;
-
-
-    //FSM for ball state
-    always @ (*)
-        case(state)
-            mainMenu: move = 1'b0;
-            level1: if(in == /* space*/) move = 1'b1;
-            endScreen: move = 1'b0;
-        endcase
-
-    always @(posedge clock) // will need slower counter for this
-        if(move)
-            begin
-            if(cX | cBrickX) vX <= -vX;
-            if(cY | cBrickY) vY <= -vY;
-            ballX <= ballX + vX;
-            ballY <= ballY + vY;
-            end
-        else    
-            begin
-            vX <= 3'b001;
-            vY <= 3'b001;
-            ballX <= /*default x and y*/;
-            ballY <= ;
-            end
-
-endmodule
-
-module collision(ballX, ballY, paddleX, paddleY, /*brick positions somehow*/, vX, vY, cPaddleX, cPaddleY, cBrickX, cBrickY, cWall, cRoof);
-    input [7:0]ballX, ballY, paddleX, paddleY;
-    input [2:0]vX, vY;
-    output reg cX, cY, cBrickX, cBrickY
-
-    always @(*)
-        begin
-        cX = 0;
-        cY = 0;
-        //Boundary Collision
-        if(ballX <= 0 | ballX > 120) cX = 1; // left right wall
-        if(ballY <= 0) cY = 1; // roof
-        //Paddle collision
-        if((ballX + vX >= paddleX) & (ballX + vX <= paddleX + length) & ballY + vY >= paddleY) cY = 1; // can add side collision for paddle
-        //Collision with bricks
-        
-        end
 endmodule
 
 module scorelife()
