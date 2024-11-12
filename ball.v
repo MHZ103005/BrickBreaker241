@@ -6,6 +6,8 @@ module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in); //velocity m
     output reg [7:0] nextX, nextY;
 
     reg move;
+    wire tick;
+    DelayCounter D2 (clock, reset, tick);
 
     //FSM for ball state
     always @ (*)
@@ -20,10 +22,10 @@ module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in); //velocity m
             begin
             if(cX | cBrickX) vX[3] <= ~vX[3];
             if(cY | cBrickY) vY[3] <= ~vY[3];
-            if(~vX[3]) ballX <= ballX +vX;
-            if(vX[3]) ballX <= ballX - vX;
-            if(~vY[3]) ballY <= ballY +vY;
-            if(vY[3]) ballY <= ballY - vY;
+            if(~vX[3] & tick) ballX <= ballX + vX;
+            if(vX[3] & tick) ballX <= ballX - vX;
+            if(~vY[3] & tick) ballY <= ballY +vY;
+            if(vY[3] & tick) ballY <= ballY - vY;
             end
         else    
             begin
