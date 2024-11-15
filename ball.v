@@ -7,12 +7,8 @@ module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in, VGA_R, VGA_G,
     output reg [7:0] nextX, nextY;
     reg plot;
     reg move;
-    reg y_Q, Y_D;
-    parameter draw = 1'b0, erase = 1'b1;
     wire tick;
-	reg [2:0] VGA_COLOR; // for DESim VGA
-
-    DelayCounter D1 (clock, reset, tick);
+    DelayCounter D2 (clock, reset, tick);
 
     //FSM for ball state
     always @ (*)
@@ -43,12 +39,12 @@ module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in, VGA_R, VGA_G,
     always @(posedge clock) // will need slower counter for this
         if(move)
             begin
-            if(cX /*| cBrickX*/) vX[3] <= ~vX[3];
-            if(cY /*| cBrickY*/) vY[3] <= ~vY[3];
-            if(~vX[3]) ballX <= ballX +vX;
-            if(vX[3]) ballX <= ballX - vX;
-            if(~vY[3]) ballY <= ballY +vY;
-            if(vY[3]) ballY <= ballY - vY;
+            if(cX | cBrickX) vX[3] <= ~vX[3];
+            if(cY | cBrickY) vY[3] <= ~vY[3];
+            if(~vX[3] & tick) ballX <= ballX + vX;
+            if(vX[3] & tick) ballX <= ballX - vX;
+            if(~vY[3] & tick) ballY <= ballY +vY;
+            if(vY[3] & tick) ballY <= ballY - vY;
             end
         else    
             begin
