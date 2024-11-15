@@ -1,12 +1,26 @@
-module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in, VGA_R, VGA_G, VGA_B,
+module main(CLOCK_50, KEY, VGA_R, VGA_G, VGA_B,
+				VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
+    input CLOCK_50;
+	input [3:0] KEY;
+
+    wire [7:0]ballX, ballY, paddleX, paddleY;
+    wire [2:0] vX, vY;
+    wire [2:0] cX, cY;
+
+    collision U1 (ballX, ballY, paddleX, paddleY, vX, vY, cX, cY);
+    ball U2 (CLOCK_50, KEY[0], cX, cY, vX, vY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK);
+
+endmodule
+
+module ball(clock, reset, /*state*/, cX, cY, ballX, ballY, vX, vY, /*in*/, VGA_R, VGA_G, VGA_B,
 				VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK); //velocity may be required, or we can just hard code it
     input clock, reset, cX, cY;
-    input in;
-    input [2:0]state;
-    output signed [2:0] vX, vY;
-    output reg [7:0] nextX, nextY;
+    //input in;
+    //input [2:0]state;
+    output reg [2:0] vX, vY;
+    output reg [7:0] ballX, ballY;
     reg plot;
-    reg move;
+    wire move;
     reg y_Q, Y_D;
     parameter draw = 1'b0, erase = 1'b1;
     wire tick;
@@ -14,14 +28,14 @@ module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in, VGA_R, VGA_G,
 
     DelayCounter D1 (clock, reset, tick);
 
-    //FSM for ball state
-    always @ (*)
-        case(state)
-            mainMenu: move = 1'b0;
-            level1: if(in == /* space*/) move = 1'b1;
-            endScreen: move = 1'b0;
-        endcase
-
+    // //FSM for ball state
+    // always @ (*)
+    //     case(state)
+    //         mainMenu: move = 1'b0;
+    //         level1: if(in == /* space*/) move = 1'b1;
+    //         endScreen: move = 1'b0;
+    //     endcase
+    assign move = 1'b1;
     // FSM for animation
     always @ (*)
         case (y_Q)
@@ -36,7 +50,7 @@ module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in, VGA_R, VGA_G,
         plot = 1'b1;
         case (y_Q)
             draw: VGA_COLOR = 3'b111;
-            erase: VGA_COLOR = 3'000;
+            erase: VGA_COLOR = 3'b000;
         endcase
     end
 

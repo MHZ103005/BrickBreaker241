@@ -1,7 +1,7 @@
-module collision(ballX, ballY, paddleX, paddleY /*brick positions somehow*/, vX, vY, cBrickX, cBrickY, cWall, cRoof);
+module collision(ballX, ballY, paddleX, paddleY /*brick positions somehow*/, vX, vY, cBrickX, cBrickY, cX, cY);
     input [7:0]ballX, ballY, paddleX, paddleY;
     input [2:0]vX, vY;
-    output reg cX, cY, cBrickX, cBrickY;
+    output reg cX, cY/*, cBrickX, cBrickY*/;
 
     always @(*)
         begin
