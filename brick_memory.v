@@ -6,7 +6,7 @@ module brick_memory(clk, brick_index, brickX, brickY, brickW, brickH, brickActiv
     output reg [3:0] brickW, brickH; //change brick width and height accordingly
     output reg brickActive;
 
-    reg [24:0] brick_data [0:39] /*synthesis ram_init_file = ram32x4.mif */; //change synthesis file
+    reg [24:0] brick_data [0:39] /*synthesis ram_init_file = ram32x4.mif */; 
 
     //initial begin for when testing outside of fpga board
 

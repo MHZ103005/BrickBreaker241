@@ -1,4 +1,4 @@
-module collision(clock, ballX, ballY, paddleX, paddleY, length, vX, vY, cBrickX, cBrickY, cWall, cRoof);
+module collision(clock, ballX, ballY, paddleX, paddleY, length, vX, vY, cBrickX, cBrickY, cX, cY);
     input clock;
     input[4:0]length;
     input [7:0]ballX, ballY, paddleX, paddleY;
@@ -19,8 +19,14 @@ module collision(clock, ballX, ballY, paddleX, paddleY, length, vX, vY, cBrickX,
         cX = 0;
         cY = 0;
         //Boundary Collision
-        if(ballX <= 0 | ballX > 159) cX = 1; // left right wall
-        if(ballY <= 0) cY = 1; // roof
+        if(vX[2] == 1)
+            if(ballX - vX[0] <= 0 | ballX - vX[0] > 159) cX = 1; // left right wall
+        else
+            if(ballX + vX[0] <= 0 | ballX + vX[0] > 159) cX = 1;
+        if(vY[2])
+            if(ballY - vY[0] <= 0) cY = 1; // roof
+        else  
+            if(ballY + vY[0] <= 0) cY = 1;
         //Paddle collision -> fix velocity doesnt account for signed
         if((ballX + vX[0] >= paddleX) & (ballX + vX[0] <= paddleX + length) & ballY + vY[0] >= paddleY) cY = 1; // can add side collision for paddle
         end

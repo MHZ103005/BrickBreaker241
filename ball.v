@@ -1,9 +1,9 @@
-module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in); //velocity may be required, or we can just hard code it
+module ball(clock, reset, state, cX, cY, ballX, ballY, vX, vY, in); //velocity may be required, or we can just hard code it
     input clock, reset, cX, cY;
     input in;
     input [2:0]state;
     output signed [2:0] vX, vY;
-    output reg [7:0] nextX, nextY;
+    output reg [7:0] ballX, ballY;
 
     reg move;
     wire tick;
@@ -31,8 +31,7 @@ module ball(clock, reset, state, cX, cY, nextX, nextY, vX, vY, in); //velocity m
             begin
             vX <= 3'b001;
             vY <= 3'b001;
-            ballX <= 20; // temporary
-            ballY <= 20; // temporary
+            ballX <= 8'd20; // temporary
+            ballY <= 8'd20; // temporary
             end
-
 endmodule

@@ -6,7 +6,7 @@ module DelayCounter(clock, reset, Q);
     slowCounter S1 (clock, reset, slowcount);
     always @ (posedge clock)
         if(slowcount == 26'd50000000) Q <= Q + 1;
-        else Q <= 0
+        else Q <= 0;
 endmodule
 
 

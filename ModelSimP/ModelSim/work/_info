@@ -1,0 +1,217 @@
+m255
+K4
+z2
+13
+!s112 1.1
+!i10d 8192
+!i10e 25
+!i10f 100
+cModel Technology
+Z0 dC:/Users/micha/Documents/ECE241-Labs/Lab5/part3/ModelSim
+vCounter26B
+Z1 !s110 1730738699
+!i10b 1
+!s100 gIokK1ES8RiC3l@0l<k:10
+IYCNUFMUZI::0gcTBGBPDO2
+Z2 VDg1SIo80bB@j0V0VzS_@n1
+R0
+Z3 w1730738689
+Z4 8../part3.v
+Z5 F../part3.v
+L0 90
+Z6 OV;L;10.5b;63
+r1
+!s85 0
+31
+Z7 !s108 1730738699.000000
+Z8 !s107 ../part3.v|
+Z9 !s90 -reportprogress|300|../part3.v|
+!i113 1
+Z10 tCvgOpt 0
+n@counter26@b
+vCounterHS
+R1
+!i10b 1
+!s100 m1HDb<Fle;I`78mhRiLHA1
+I:_]YZ`Z==1N2To=?7:cBz2
+R2
+R0
+R3
+R4
+R5
+L0 105
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+n@counter@h@s
+vdownCount
+R1
+!i10b 1
+!s100 P]dmM719=1z49?A_0j_aR1
+IF53:mEKnoCfBT<Oz>I3SQ1
+R2
+R0
+R3
+R4
+R5
+L0 184
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+ndown@count
+vHScounter
+!s110 1730439944
+!i10b 1
+!s100 3e4][AlQ`Y]_i2_c:z85O1
+IRbEd1fhDa>JHekU1G;<YR1
+R2
+R0
+w1730439862
+R4
+R5
+L0 89
+R6
+r1
+!s85 0
+31
+!s108 1730439944.000000
+R8
+R9
+!i113 1
+R10
+n@h@scounter
+vlengthCounter
+R1
+!i10b 1
+!s100 gcWEcN]Y0KQSU5;BH=_SD0
+IDlYQ6Tz<3GXV^co8`c8@n3
+R2
+R0
+R3
+R4
+R5
+L0 138
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+nlength@counter
+vMorseMux
+R1
+!i10b 1
+!s100 >5b<Toj0@A`Neb?8lmBd31
+I066oQo:88GVP449dP[kEI3
+R2
+R0
+R3
+R4
+R5
+L0 121
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+n@morse@mux
+vpaddle
+Z11 !s110 1731338867
+!i10b 1
+!s100 BDYN=a4=:MLCz0ODYjz3H0
+In]hQ>g]]@NgoiDGzDCOFL2
+R2
+Z12 dC:/Users/micha/Documents/ECE241-Labs/Project/ModelSimP/ModelSim
+w1731300902
+8../paddle.v
+F../paddle.v
+L0 1
+R6
+r1
+!s85 0
+31
+!s108 1731338866.000000
+!s107 ../paddle.v|
+!s90 -reportprogress|300|../paddle.v|
+!i113 1
+R10
+vpart3
+R1
+!i10b 1
+!s100 CGHb9I?KjD_3FC>ZdYe_m3
+I8`EKlDd6j=W@a`iP@f4V53
+R2
+R0
+R3
+R4
+R5
+L0 1
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+vshiftReg
+R1
+!i10b 1
+!s100 f@A[P76;5aZ6LeR3[3<PJ3
+I5@F4OHjBCTS8ih^?;5?jC3
+R2
+R0
+R3
+R4
+R5
+L0 155
+R6
+r1
+!s85 0
+31
+R7
+R8
+R9
+!i113 1
+R10
+nshift@reg
+vtestbench
+R11
+!i10b 1
+!s100 k3Y@H<gWgmOnXX^BeQ:W>1
+I]2K:jZ55=NaUIDG[BE=P91
+R2
+R12
+w1731301029
+8testbench.v
+Ftestbench.v
+L0 3
+R6
+r1
+!s85 0
+31
+!s108 1731338867.000000
+!s107 testbench.v|
+!s90 -reportprogress|300|testbench.v|
+!i113 1
+R10
