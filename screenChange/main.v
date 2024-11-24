@@ -29,22 +29,53 @@ assign reset = KEY[0];
 wire tick;
 DelayCounter d2 (clock, reset, tick);
 
+//Game FSM
+parameter mainMenu = 3'b0, game1 = 3'b001, loss = 3'b010, win = 3'b011;
+reg [2:0]gameState, ngState;
+
+always @(*)
+    case(gameState)
+        mainMenu: if(keyP == 8'h29) ngState = game1;
+                    else ngState = mainMenu;
+        game1: begin if(score == 40) ngState = win;
+               // else if(life==0) ngState = loss;
+                else ngState = game1; end
+    endcase
+
+always @(posedge clock)
+    if(!reset) gameState <= mainMenu;
+    else gameState <= ngState;
+
+//score
+wire [5:0]score;
+wire [1:0]life;
+
+seg7 score1 ({2'b0, score[5:4]}, HEX5);
+seg7 score2 (score[3:0], HEX4);
+seg7 health1 ({2'b0, life}, HEX2);
+
+scoreHealth score3 (clock, reset, cX, cY, ballY, score, life);
+
 //FSM for background drawing
-parameter state1 = 3'b0, paddleDraw = 3'b001, state3 = 3'b010, drawBall = 3'b011, paddleDraw2 = 3'b100, drawBall2 = 3'b101;
+parameter state1 = 3'b0, paddleDraw = 3'b001, state3 = 3'b010, drawBall = 3'b011, erasePaddle = 3'b100, eraseBall = 3'b101, waitState = 3'b110;
 reg [2:0] currentDraw, ns;
 reg doneP, doneB;
 always @(*)
     case(currentDraw)
-        state1: if(address == 15'd19199) ns = paddleDraw;
+        state1: if(gameState == mainMenu) ns = state1;
+                else if(address == 15'd19199) ns = paddleDraw;
                 else ns = state1;
         paddleDraw: if(address == 15'd19199) ns = drawBall;
                 else ns = paddleDraw;
-        drawBall: if(address == 15'd19199) ns = state3;
+        drawBall: if(address == 15'd19199) ns = erasePaddle;
                 else ns = drawBall;
-        state3: if(address == 15'd19199) ns = paddleDraw;
+        erasePaddle: if(erasePaddleCount == 160) ns = eraseBall;
+                    else ns = erasePaddle;
+        eraseBall: if(ballY < 30) ns = state3;
+                    else ns = paddleDraw; 
+        state3: if(address == 15'd19199) ns = state1;
                 else ns = state3;
-        // waitState: if(fps60 == 20'd0 |fps60 == 20'd208333 | fps60 == 20'd416666 | fps60 == 20'd625000) ns = paddleDraw;
-        //             else ns = waitState;
+         waitState: ns = state1;
     endcase
 
 always @(posedge clock)
@@ -66,6 +97,13 @@ always @(*)
         drawBall:begin VGA_Xalt <= ballX;
                 VGA_Yalt <= ballY;
                 VGA_COLOR <= 3'b111; end
+        erasePaddle:
+                begin VGA_Xalt <= erasePaddleCount;
+                    VGA_Yalt <= 7'd100;
+                    VGA_COLOR = 3'b000;
+                end
+        eraseBall: begin VGA_Xalt = preX;
+                    VGA_Yalt = preY; end
         state3: begin
                 VGA_Xalt = Xb;
                 VGA_Yalt <= Yb;
@@ -101,26 +139,30 @@ wire [7:0] eraseX;
 reg [7:0] VGA_Xalt; 
 reg [6:0] VGA_Yalt;  
 
-wire [2:0] colour1, colour2, colour3, currentScene;
+//background changing
+wire [2:0] colour1, colour2, colour3, colour4, currentScene;
 wire [1:0] scene;
 
-MainMenu rom1 (address, clock, colour1);
+MainMenu rom1 (address, clock, colour1); //memory for all backgrounds
 win rom2 (address, clock, colour2);
 losegame rom3 (address, clock, colour3);
+level1 rom4(address, clock, colour4);
 
-muxScreens mux1 (colour1, colour2, colour3, scene, currentScene);
+muxScreens mux1 (colour1, colour2, colour3, colour4, gameState, currentScene);
 
 assign scene = SW[9:8];
 
 wire [7:0] Xb;
 wire [6:0] Yb;
 wire[14:0] address;
+wire[7:0] erasePaddleCount;
 //for background
 xyscroll x1 (clock, reset, Xb, Yb, 1'b1);
 addressScroll x2 (clock, reset, address, 1'b1);
+counter160 x3 (clock, reset, erasePaddleCount, currentDraw == erasePaddle);
 
 //for paddle
-XCcounter x3 (clock, reset, currentDraw == paddleDraw | currentDraw == paddleDraw2, XC);
+XCcounter x23 (clock, reset, currentDraw == paddleDraw, XC);
 UpDn_count U5 ({K{1'b0}}, CLOCK_50, KEY[0], 1'b1, 1'b0, 1'b1, slow);
         defparam U5.n = K;
 assign sync = (slow == 0);
@@ -202,62 +244,58 @@ always @(posedge clock)
     else
         y_Qball <= Y_Dball;
 
-//Brick
-wire [3:0] brickW;
-wire [2:0] brickH;
-wire[7:0]brickX;
-wire[6:0]brickY;
-reg [3:0] WC;
-reg [2:0] HC;
-reg Read_address;
-reg [39:0] brickedUP;
+// //Brick
+// wire [3:0] brickW;
+// wire [2:0] brickH;
+// wire[7:0]brickX;
+// wire[6:0]brickY;
+// reg [3:0] WC;
+// reg [2:0] HC;
+// reg Read_address;
+// reg [39:0] brickedUP;
 
-// count through read addresses
-always @ (posedge Clock)
-        if (reset == 0 || Read_address == 39) Read_address <= 0;
-        else Read_address <= Read_address + 1;
+// // count through read addresses
+// always @ (posedge Clock)
+//         if (reset == 0 || Read_address == 39) Read_address <= 0;
+//         else Read_address <= Read_address + 1;
 
-// instantiate memory module
-ram40x22 BG1 (Clock, Read_address, DataOut);
+// // instantiate memory module
+// //ram40x22 BG1 (clock, Read_address, DataOut);
 
-// get the data of a brick from memory
-assign {brickX, brickY, brickW, brickH} = DataOut;
+// // get the data of a brick from memory
+// assign {brickX, brickY, brickW, brickH} = DataOut;
 
-always @ (posedge clock)
-begin
-    if (reset) begin WC <= 0; HC <= 0; brickedUP <= {40{1'b1}}; end
-    else
-        WC <= WC + 1;
-        if (WC == brickW)
-        begin
-            WC <= 0;
-            if (HC == brickH) HC <= 0;
-            else HC <= HC + 1;
-        end
+// always @ (posedge clock)
+// begin
+//     if (reset) begin WC <= 0; HC <= 0; brickedUP <= {40{1'b1}}; end
+//     else
+//         WC <= WC + 1;
+//         if (WC == brickW)
+//         begin
+//             WC <= 0;
+//             if (HC == brickH) HC <= 0;
+//             else HC <= HC + 1;
+//         end
 
-    //outX <= brickX + WC;
-   // outY <= brickY + HC;
-    //outCOLOR <= 3'b000;
-   // plot <= 1'b1;
-    if (brickedUP[Read_address])
-        if ((((vY[2] & ballY + vY[0] == brickY) | (!vY[2] & ballY - vY[0] == brickY + brickH)) & ((ballX + vX[0] > brickX & !vX[2] & ballX +vX[0] < brickX + brickW) | (ballX - vX[0] > brickX & vX[2] & ballX < brickX + brickW))) | (((vX[2] & ballX + vX[0] == brickX) | (!vX[2] & ballX - vX[0] == brickX + brickW)) & ((ballY + vY[0] > brickY & !vY[2] & ballY +vY[0] < brickY + brickH) | (ballY - vY[0] > brickY & vY[2] & ballY < brickY + brickH))) && brickedUP[Read_address])            begin
-            brickedUP[Read_address] = 0;
-            cX <= 1;
-            cY <= 1;
-        end
+//     //outX <= brickX + WC;
+//    // outY <= brickY + HC;
+//     //outCOLOR <= 3'b000;
+//    // plot <= 1'b1;
+//     if (brickedUP[Read_address])
+//         if ((((vY[2] & ballY + vY[0] == brickY) | (!vY[2] & ballY - vY[0] == brickY + brickH)) & ((ballX + vX[0] > brickX & !vX[2] & ballX +vX[0] < brickX + brickW) | (ballX - vX[0] > brickX & vX[2] & ballX < brickX + brickW))) | (((vX[2] & ballX + vX[0] == brickX) | (!vX[2] & ballX - vX[0] == brickX + brickW)) & ((ballY + vY[0] > brickY & !vY[2] & ballY +vY[0] < brickY + brickH) | (ballY - vY[0] > brickY & vY[2] & ballY < brickY + brickH))) && brickedUP[Read_address])            begin
+//             brickedUP[Read_address] = 0;
+//             cX <= 1;
+//             cY <= 1;
+//         end
 
-end
+//end
 
 
-
+//Assigning VGA variables
 assign VGA_X = VGA_Xalt;
 assign VGA_Y = VGA_Yalt;
 
-
-
-
-
-    // connect to VGA controller
+// connect to VGA controller
 vga_adapter VGA (
         .resetn(KEY[0]),
         .clock(CLOCK_50),
@@ -314,19 +352,21 @@ always @ (posedge clock)
     end
 endmodule
 
-module muxScreens(c1, c2, c3, scene, Q);
-    input [2:0]c1, c2, c3;
-    input [1:0] scene;
+module muxScreens(c1, c2, c3, c4, state, Q);
+    input [2:0]c1, c2, c3, c4;
+    input [2:0] state;
     output reg [2:0]Q;
 
     always @ (*)
     begin
-        if(scene == 2'b00)
+        if(state == 3'b000)
             Q <= c1;
-        else if(scene == 2'b01)
-            Q <= c2;
-        else if(scene == 2'b10)
+        else if(state == 3'b001)
+            Q <= c4;
+        else if(state == 3'b010)
             Q <= c3;
+        else if(state == 3'b011)
+            Q <= c2;
     end
 endmodule
 
@@ -486,47 +526,74 @@ module ballMove (input clock, input moveEN, output reg [7:0] ballX, output reg [
     end
 endmodule
 
-module brick (input clock, input [7:0] ballX, input [6:0] ballY, output wire [7:0] brickX, output wire [6:0] brickY, output reg cX, cY, output reg [7:0] outX, output reg [6:0] outY, output reg [2:0] outCOLOR, input resetn);
-    wire [3:0] brickW;
-    wire [2:0] brickH;
-    reg [3:0] WC;
-    reg [2:0] HC;
-    reg Read_address;
-    reg [39:0] brickedUP;
-    
-    // count through read addresses
-    always @ (posedge Clock)
-            if (Resetn == 0 || Read_address == 39) Read_address <= 0;
-            else Read_address <= Read_address + 1;
 
-    // instantiate memory module
-    ram40x22 BG1 (Clock, Read_address, DataOut);
+module seg7(inputNum, Display);
 
-    // get the data of a brick from memory
-    assign {brickX, brickY, brickW, brickH} = DataOut;
+input [3:0] inputNum;
+output reg [6:0] Display;
 
+    always @(*)
+    begin
+        if (inputNum == 4'b0000)
+            Display = 7'b1000000;  // 0
+        else if (inputNum == 4'b0001)
+            Display = 7'b1111001;  // 1
+        else if (inputNum == 4'b0010)
+            Display = 7'b0100100;  // 2
+        else if (inputNum == 4'b0011)
+            Display = 7'b0110000;  // 3
+        else if (inputNum == 4'b0100)
+            Display = 7'b0011001;  // 4
+        else if (inputNum == 4'b0101)
+            Display = 7'b0010010;  // 5
+        else if (inputNum == 4'b0110)
+            Display = 7'b0000010;  // 6
+        else if (inputNum == 4'b0111)
+            Display = 7'b1111000;  // 7
+        else if (inputNum == 4'b1000)
+            Display = 7'b0000000;  // 8
+        else if (inputNum == 4'b1001)
+            Display = 7'b0010000;  // 9
+        else if (inputNum == 4'b1010)
+            Display = 7'b0001000;  // A
+        else if (inputNum == 4'b1011)
+            Display = 7'b0000011;  // B
+        else if (inputNum == 4'b1100)
+            Display = 7'b1000110;  // C
+        else if (inputNum == 4'b1101)
+            Display = 7'b0100001;  // D
+        else if (inputNum == 4'b1110)
+            Display = 7'b0000110;  // E
+        else if (inputNum == 4'b1111)
+            Display = 7'b0001110;  // F
+        else
+            Display = 7'b1111111;  // All Display off
+    end
+endmodule
+
+module scoreHealth(clock, reset, cBrickX, cBrickY, ballY, score, life); // add move and set it to 0 when ball goes below 0
+    input clock, reset, cBrickX, cBrickY;
+    input [6:0] ballY;
+    output reg [3:0] score;
+    output reg[1:0] life;
     always @ (posedge clock)
     begin
-        if (Resetn) begin WC <= 0; HC <= 0; brickedUP <= {40{1'b1}}; end
-        else
-            WC <= WC + 1;
-            if (WC == brickW)
-            begin
-                WC <= 0;
-                if (HC == brickH) HC <= 0;
-                else HC <= HC + 1;
-            end
-
-        outX <= brickX + WC;
-        outY <= brickY + HC;
-        outCOLOR <= 3'b000;
-        plot <= 1'b1;
-
-        if (brickedUP[Read_address])
-            if ((((vY[2] & ballY + vY[0] == brickY) | (!vY[2] & ballY - vY[0] == brickY + brickH)) & ((ballX + vX[0] > brickX & !vX[2] & ballX +vX[0] < brickX + brickW) | (ballX - vX[0] > brickX & vX[2] & ballX < brickX + brickW))) | (((vX[2] & ballX + vX[0] == brickX) | (!vX[2] & ballX - vX[0] == brickX + brickW)) & ((ballY + vY[0] > brickY & !vY[2] & ballY +vY[0] < brickY + brickH) | (ballY - vY[0] > brickY & vY[2] & ballY < brickY + brickH))) && brickedUP[Read_address])            begin
-                brickedUP[Read_address] = 0;
-                cX <= 1;
-                cY <= 1;
-            end
+        if(!reset)
+            score <= 4'b0000;
+            life <= 2'b11;
+        if(cBrickX | cBrickY) score <= score + 1;
+        if(ballY < 20) life <= life -1;
     end
+endmodule
+
+module counter160 (clock, reset, Q, enable);
+    input clock, reset, enable;
+    output reg [7:0]Q;
+
+    always @(posedge clock)
+        begin
+        if(!reset) Q <= 8'b0;
+        if(enable) Q <= Q + 1;
+        else Q <= 0;
+        end
 endmodule

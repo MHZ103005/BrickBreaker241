@@ -112,6 +112,58 @@
 					"strict" : false
 				},
 				{
+					"name" : "HEX4[0]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX4[1]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX4[2]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX4[3]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX4[4]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX4[5]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX4[6]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX2[0]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX2[2]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX2[3]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX2[4]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX2[5]",
+					"strict" : false
+				},
+				{
+					"name" : "HEX2[6]",
+					"strict" : false
+				},
+				{
 					"name" : "PS2_CLK",
 					"strict" : false
 				},
@@ -129,14 +181,6 @@
 				},
 				{
 					"name" : "SW[7]",
-					"strict" : false
-				},
-				{
-					"name" : "SW[8]",
-					"strict" : false
-				},
-				{
-					"name" : "SW[9]",
 					"strict" : false
 				}
 			]
