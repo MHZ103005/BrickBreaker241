@@ -1,3 +1,4 @@
+
 module collision(clock, ballX, ballY, paddleX, paddleY, length, vX, vY, cBrickX, cBrickY, cX, cY);
     input clock;
     input[4:0]length;
