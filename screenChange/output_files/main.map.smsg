@@ -1,0 +1,2 @@
+Warning (10268): Verilog HDL information at main.v(99): always construct contains both blocking and non-blocking assignments File: C:/Users/micha/Downloads/screenChange/main.v Line: 99
+Warning (10268): Verilog HDL information at main.v(339): always construct contains both blocking and non-blocking assignments File: C:/Users/micha/Downloads/screenChange/main.v Line: 339
