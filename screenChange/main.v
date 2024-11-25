@@ -1,4 +1,4 @@
-module main(SW, CLOCK_50, PS2_CLK, PS2_DAT, LEDR, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, HEX5, HEX4, HEX2);
+module main(SW, CLOCK_50, PS2_CLK, PS2_DAT, LEDR, KEY, VGA_R, VGA_G, VGA_B, VGA_HS, VGA_VS, VGA_BLANK_N, VGA_SYNC_N, VGA_CLK, HEX5, HEX4, HEX2, AUD_XCK, AUD_DACDAT, AUD_BCLK, AUD_ADCLRCK, AUD_DACLRCK, FPGA_I2C_SCLK, FPGA_I2C_SDAT);
 input CLOCK_50;
 inout PS2_DAT, PS2_CLK;
 input [3:0]KEY;
@@ -16,6 +16,14 @@ output VGA_BLANK_N;
 output VGA_SYNC_N;
 output VGA_CLK;	
 
+output AUD_XCK;      
+output AUD_DACDAT;    
+inout AUD_BCLK;       
+inout AUD_ADCLRCK;     
+inout AUD_DACLRCK;      
+output FPGA_I2C_SCLK;  
+inout FPGA_I2C_SDAT; 
+
 
 //wires inputs and outputs
 wire clock;
@@ -30,16 +38,19 @@ wire tick;
 DelayCounter d2 (clock, reset, tick);
 
 //Game FSM
-parameter mainMenu = 3'b0, game1 = 3'b001, loss = 3'b010, win = 3'b011;
+parameter mainMenu = 3'b0, game1 = 3'b001, loss = 3'b010, win = 3'b011, noMotion = 3'b100;
 reg [2:0]gameState, ngState;
 
 always @(*)
     case(gameState)
-        mainMenu: if(keyP == 8'h29) ngState = game1;
+        mainMenu: if(keyP == 8'h29) ngState = noMotion;
                     else ngState = mainMenu;
-        game1: begin if(score == 40) ngState = win;
-               // else if(life==0) ngState = loss;
+        game1: begin //if(score == 40) ngState = win;
+               if(ballY > 100) ngState = noMotion;
                 else ngState = game1; end
+        noMotion: begin if(life==0) ngState = loss;
+                    else if(keyP == 8'h29) ngState = game1;
+                    else ngState = noMotion; end
     endcase
 
 always @(posedge clock)
@@ -54,7 +65,7 @@ seg7 score1 ({2'b0, score[5:4]}, HEX5);
 seg7 score2 (score[3:0], HEX4);
 seg7 health1 ({2'b0, life}, HEX2);
 
-scoreHealth score3 (clock, reset, cX, cY, ballY, score, life);
+scoreHealth score3 (clock, reset, cX, cY, ballY, score);
 
 //FSM for background drawing
 parameter state1 = 3'b0, paddleDraw = 3'b001, state3 = 3'b010, drawBall = 3'b011, erasePaddle = 3'b100, eraseBall = 3'b101, waitState = 3'b110;
@@ -62,20 +73,22 @@ reg [2:0] currentDraw, ns;
 reg doneP, doneB;
 always @(*)
     case(currentDraw)
-        state1: if(gameState == mainMenu) ns = state1;
+        state1: if(gameState == mainMenu | gameState == loss) ns = state1;
                 else if(address == 15'd19199) ns = paddleDraw;
                 else ns = state1;
         paddleDraw: if(address == 15'd19199) ns = drawBall;
                 else ns = paddleDraw;
         drawBall: if(address == 15'd19199) ns = erasePaddle;
                 else ns = drawBall;
-        erasePaddle: if(erasePaddleCount == 160) ns = eraseBall;
-                    else ns = erasePaddle;
-        eraseBall: if(ballY < 30) ns = state3;
+        erasePaddle:begin if(!move) ns = waitState;  
+                    else if(erasePaddleCount == 160) ns = eraseBall;
+                    else ns = erasePaddle;end
+        eraseBall:  if(ballY < 30) ns = state3;
                     else ns = paddleDraw; 
         state3: if(address == 15'd19199) ns = state1;
                 else ns = state3;
-         waitState: ns = state1;
+        waitState:  if(erasePaddleCount == 160) ns = state3;
+                    else ns = waitState;
     endcase
 
 always @(posedge clock)
@@ -105,11 +118,15 @@ always @(*)
         eraseBall: begin VGA_Xalt = preX;
                     VGA_Yalt = preY; end
         state3: begin
-                VGA_Xalt = Xb;
+                VGA_Xalt <= Xb;
                 VGA_Yalt <= Yb;
                 plot <= 1'b1;
                 VGA_COLOR <= 3'b000;
                 end
+        waitState: begin
+                    VGA_Xalt <= erasePaddleCount;
+                    VGA_Yalt <= 7'd98;
+                    VGA_COLOR <= 3'b000; end
     endcase
 
 parameter A = 3'b000, B = 3'b001, C = 3'b010, D = 3'b011; 
@@ -141,7 +158,6 @@ reg [6:0] VGA_Yalt;
 
 //background changing
 wire [2:0] colour1, colour2, colour3, colour4, currentScene;
-wire [1:0] scene;
 
 MainMenu rom1 (address, clock, colour1); //memory for all backgrounds
 win rom2 (address, clock, colour2);
@@ -150,8 +166,6 @@ level1 rom4(address, clock, colour4);
 
 muxScreens mux1 (colour1, colour2, colour3, colour4, gameState, currentScene);
 
-assign scene = SW[9:8];
-
 wire [7:0] Xb;
 wire [6:0] Yb;
 wire[14:0] address;
@@ -159,7 +173,12 @@ wire[7:0] erasePaddleCount;
 //for background
 xyscroll x1 (clock, reset, Xb, Yb, 1'b1);
 addressScroll x2 (clock, reset, address, 1'b1);
-counter160 x3 (clock, reset, erasePaddleCount, currentDraw == erasePaddle);
+counter160 x3 (clock, reset, erasePaddleCount, currentDraw == erasePaddle | currentDraw == waitState);
+
+//erasing while not moving
+wire [7:0]Xerase;
+wire [6:0]Yerase;
+nonMovingErase non1(clock, reset, Xerase, Yerase, currentDraw == waitState);
 
 //for paddle
 XCcounter x23 (clock, reset, currentDraw == paddleDraw, XC);
@@ -208,11 +227,12 @@ wire [2:0] vX, vY;
 wire cX, cY;
 reg [2:0] y_Qball, Y_Dball;
 wire move;
-assign move = SW[7];
+//assign move = SW[7];
 
 wire [19:0] fps60;
 frame60 F1 (CLOCK_50, KEY[0], fps60);
 ballMove B1 (CLOCK_50, fps60==20'd0, ballX, ballY, vX, vY, cX, cY, preX, preY, move, X);
+moveEnabling move1 (clock, reset, keyP, gameState, move, ballY, life);
 
 // FSM state table
 always @ (*)
@@ -243,53 +263,6 @@ always @(posedge clock)
         y_Qball <= 1'b0;
     else
         y_Qball <= Y_Dball;
-
-// //Brick
-// wire [3:0] brickW;
-// wire [2:0] brickH;
-// wire[7:0]brickX;
-// wire[6:0]brickY;
-// reg [3:0] WC;
-// reg [2:0] HC;
-// reg Read_address;
-// reg [39:0] brickedUP;
-
-// // count through read addresses
-// always @ (posedge Clock)
-//         if (reset == 0 || Read_address == 39) Read_address <= 0;
-//         else Read_address <= Read_address + 1;
-
-// // instantiate memory module
-// //ram40x22 BG1 (clock, Read_address, DataOut);
-
-// // get the data of a brick from memory
-// assign {brickX, brickY, brickW, brickH} = DataOut;
-
-// always @ (posedge clock)
-// begin
-//     if (reset) begin WC <= 0; HC <= 0; brickedUP <= {40{1'b1}}; end
-//     else
-//         WC <= WC + 1;
-//         if (WC == brickW)
-//         begin
-//             WC <= 0;
-//             if (HC == brickH) HC <= 0;
-//             else HC <= HC + 1;
-//         end
-
-//     //outX <= brickX + WC;
-//    // outY <= brickY + HC;
-//     //outCOLOR <= 3'b000;
-//    // plot <= 1'b1;
-//     if (brickedUP[Read_address])
-//         if ((((vY[2] & ballY + vY[0] == brickY) | (!vY[2] & ballY - vY[0] == brickY + brickH)) & ((ballX + vX[0] > brickX & !vX[2] & ballX +vX[0] < brickX + brickW) | (ballX - vX[0] > brickX & vX[2] & ballX < brickX + brickW))) | (((vX[2] & ballX + vX[0] == brickX) | (!vX[2] & ballX - vX[0] == brickX + brickW)) & ((ballY + vY[0] > brickY & !vY[2] & ballY +vY[0] < brickY + brickH) | (ballY - vY[0] > brickY & vY[2] & ballY < brickY + brickH))) && brickedUP[Read_address])            begin
-//             brickedUP[Read_address] = 0;
-//             cX <= 1;
-//             cY <= 1;
-//         end
-
-//end
-
 
 //Assigning VGA variables
 assign VGA_X = VGA_Xalt;
@@ -350,6 +323,51 @@ always @ (posedge clock)
         endcase
     end
     end
+
+
+//AUDIO CONTROLLER
+reg wave;
+reg [31:0]countAudio;
+wire[31:0]audioOut;
+
+integer period;
+always@(*) 
+    if(cX | cY) period = 56818;
+    else (gameState == loss) period = 1775;
+    else period = 500000000;
+
+always @(posedge clock)
+    if(!reset) begin countAudio <= 0; wave <= 0; end
+    else if (countAudio >= period) begin countAudio <= 0; wave = ~wave; end
+    else countAudio <= countAudio + 1;
+
+assign audioOut = wave ? 32'd1000000000: -32'd1000000000;
+
+Audio_Controller Audio_Controller ( // Audio controller takes audio_out and manages it
+        .CLOCK_50(clock),
+        .reset(~KEY[0]),
+        .clear_audio_in_memory(),
+        .clear_audio_out_memory(),
+        .left_channel_audio_out(audioOut),
+        .right_channel_audio_out(audioOut),
+        .write_audio_out(1'b1),     // Always write audio out
+        .AUD_ADCDAT(1'b0),
+        .AUD_BCLK(AUD_BCLK),
+        .AUD_ADCLRCK(AUD_ADCLRCK),
+        .AUD_DACLRCK(AUD_DACLRCK),
+        .audio_in_available(),
+        .audio_out_allowed(),
+        .AUD_XCK(AUD_XCK),
+        .AUD_DACDAT(AUD_DACDAT)
+    );
+
+    // Audio configuration module
+    avconf #(.USE_MIC_INPUT(1)) avc (
+        .FPGA_I2C_SCLK(FPGA_I2C_SCLK),
+        .FPGA_I2C_SDAT(FPGA_I2C_SDAT),
+        .CLOCK_50(CLOCK_50),
+        .reset(~KEY[0])
+    );
 endmodule
 
 module muxScreens(c1, c2, c3, c4, state, Q);
@@ -361,12 +379,12 @@ module muxScreens(c1, c2, c3, c4, state, Q);
     begin
         if(state == 3'b000)
             Q <= c1;
-        else if(state == 3'b001)
-            Q <= c4;
-        else if(state == 3'b010)
-            Q <= c3;
         else if(state == 3'b011)
             Q <= c2;
+        else if(state == 3'b010)
+            Q <= c3;
+        else if(state == 3'b001 | 3'b100)
+            Q <= c4;
     end
 endmodule
 
@@ -499,7 +517,8 @@ module ballMove (input clock, input moveEN, output reg [7:0] ballX, output reg [
     assign cY = (((ballY-vY[0] == 0) || (ballY-vY[0] == 119)) && vY[2]) || (((ballY+vY[0] == 0) || (ballY+vY[0] == 119)) && ~vY[2]) || (ballY + vY[0] == 7'd100 & !vY[2]) & ((ballX + vX[0] > paddleX & !vX[2] & ballX +vX[0] < paddleX + 19) | (ballX - vX[0] > paddleX & vX[2] & ballX < paddleX + 19 ));
     always @ (posedge clock)
     begin
-        if (!move) begin ballX <= 8'd79; ballY <= 7'd99; preX <= 8'd79; preY <= 7'd99; vX <= 3'b101; vY <= 3'b101; end
+        if (!move) begin ballX <= paddleX + 9; ballY <= 7'd98; preX <= paddleX + 9; preY <= 7'd98; vX <= 3'b101; vY <= 3'b101; end
+        else 
         if (moveEN)
         begin
             if (cX)
@@ -571,18 +590,15 @@ output reg [6:0] Display;
     end
 endmodule
 
-module scoreHealth(clock, reset, cBrickX, cBrickY, ballY, score, life); // add move and set it to 0 when ball goes below 0
+module scoreHealth(clock, reset, cBrickX, cBrickY, ballY, score); // add move and set it to 0 when ball goes below 0
     input clock, reset, cBrickX, cBrickY;
     input [6:0] ballY;
     output reg [3:0] score;
-    output reg[1:0] life;
     always @ (posedge clock)
     begin
         if(!reset)
             score <= 4'b0000;
-            life <= 2'b11;
         if(cBrickX | cBrickY) score <= score + 1;
-        if(ballY < 20) life <= life -1;
     end
 endmodule
 
@@ -596,4 +612,33 @@ module counter160 (clock, reset, Q, enable);
         if(enable) Q <= Q + 1;
         else Q <= 0;
         end
+endmodule
+
+module nonMovingErase (clock, reset, X, Y, enable);
+    input clock, reset, enable;
+    output reg [6:0]Y;
+    output reg [7:0]X;
+    
+    always @ (posedge clock)begin
+        if(!reset) begin X <= 0; Y <= 7'd118; end
+        if(enable) 
+            if(X == 8'd160) begin X <= 0; Y <= Y+1;end 
+            else X <= X+1;
+        else begin X <= 0; Y <= 7'd118; end
+    end 
+endmodule 
+
+module moveEnabling (clock, reset, keyin, state, move, ballY, life);
+    input clock, reset;
+    input [7:0]keyin;
+    input [2:0]state;
+    input [6:0] ballY;
+    output reg move; 
+    output reg [1:0]life;
+
+    always @(posedge clock)
+        if(!reset) begin move <= 1'b0; life <= 2'b11; end
+        else 
+            if(keyin == 8'h29 && state == 3'b100) move <= 1'b1;
+            else if(ballY > 100) if(move) begin life <= life - 1; move<= 1'b0; end
 endmodule
